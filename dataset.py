@@ -10,6 +10,7 @@ from glob import glob
 from PIL import Image
 from torchvision import transforms
 import ipdb
+import time
 
 class GTADataset(torch.utils.data.Dataset):
     def __init__(
@@ -19,30 +20,40 @@ class GTADataset(torch.utils.data.Dataset):
         self.S = S
         self.B = B
         self.C = C
-        self.transform=transforms.Compose([transforms.Resize(image_size), transforms.ToTensor(),])
+        self.transform = transforms.Compose([transforms.Resize(image_size), transforms.ToTensor(),])
         self.image_size = image_size
+        self.images = torch.zeros((len(self.label), 3, *image_size))
+        self.grid_widths = []
+        self.grid_heights = []
+        self.image_widths = []
+        self.image_heights = []
+        for i, (file_name, label) in enumerate(self.label.values):
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print(f"Loading images:{i}/{len(self.label)}")
+            image_name = './data/trainval/'+file_name + '_image.jpg'
+            image = Image.open(image_name)
+            self.grid_widths.append(image.size[0] / self.S)
+            self.grid_heights.append(image.size[1] / self.S)
+            self.image_widths.append(image.size[0])
+            self.image_heights.append(image.size[1])
+            if self.transform:
+                image = self.transform(image)
+            self.images[i] = image
 
     def __len__(self):
         return len(self.label)
 
     def __getitem__(self, index):
-        file_name = self.label.iloc[index]['guid/image']
-        image_name = file_name + '_image.jpg'
-        image = Image.open('./data/trainval/'+image_name)
-        grid_width, grid_height = image.size[0]/self.S, image.size[1]/self.S
-        image_width, image_height = image.size
-
-        if self.transform:
-            # image = self.transform(image)
-            image = self.transform(image)
-
+        image = self.images[index]
+        grid_width, grid_height = self.grid_widths[index], self.grid_heights[index]
+        image_width, image_height = self.image_widths[index], self.image_heights[index]
 
         # Convert To Cells
         label_matrix = torch.zeros((self.S, self.S, self.C + 5 * self.B))
-        label_matrix[:,:,0] = torch.ones(label_matrix.shape[0:2], dtype=torch.float)
-        label = self.label.iloc[index]['label']
+        label_matrix[:, :, 0] = torch.ones(label_matrix.shape[0:2], dtype=torch.float)
+        name, label = self.label.iloc[index]
         if label != 0:
-            x, y, w, h = self.bbox.iloc[index, 1:]
+            x, y, w, h = self.bbox[self.bbox['guid/image'] == name].iloc[0][1:]
             x = x / image_width * self.image_size[0]
             w = w / image_width * self.image_size[0]
             y = y / image_height * self.image_size[1]
@@ -60,8 +71,8 @@ class GTADataset(torch.utils.data.Dataset):
             label_matrix[idx_x][idx_y][self.C+1 : self.C+5] = torch.tensor([norm_x, norm_y, norm_w, norm_h])
             label_matrix[idx_x][idx_y][self.C+6 : self.C+10] = torch.tensor([norm_x, norm_y, norm_w, norm_h])
 
-
         return image, label_matrix
 
 if __name__=='__main__':
-    dataset = GTADataset('./data/trainval/trainval_labels.csv', './data/trainval/trainval_bboxes.csv')
+    dataset = GTADataset('./data/trainval/trainval_labels.csv', 'data/trainval/trainval_bboxes.csv')
+
