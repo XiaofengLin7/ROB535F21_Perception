@@ -120,6 +120,11 @@ def write_bboxes(path):
 
                 w = max_x - min_x
                 h = max_y - min_y
+
+                x = x / img_w * 448
+                y = y / img_h * 448
+                w = w / img_w * 448
+                h = h / img_h * 448
                 xyz = np.array([ x, y, w, h])
                 writer.writerow(['{}/{}'.format(guid, idx), x, y, w, h])
 
