@@ -85,7 +85,5 @@ Contributors names and contact info
 
 ## Reference
 
-- [Code base](https://github.com/aladdinpersson/Machine-Learning-Collection)
-
 - [Yolov1 paper](https://arxiv.org/abs/1506.02640)
 
